@@ -46,4 +46,6 @@
  1492  vim ~/.ssh/id_rsa
  1493  vim ~/.ssh/id_rsa.pub
  1494  git push origin master
-
+ git tag -a v2.2.0.1 -m "add the github command help documention"
+git show v2.2.0.1
+git push origin --tags
