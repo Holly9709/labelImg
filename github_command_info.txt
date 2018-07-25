@@ -1,0 +1,49 @@
+
+ 1448  git clone https://github.com/zhaobai62/labelImg.git
+ 1449  cd labelImg
+ 1450  ls
+ 1451  git status
+ 1452  cd ..
+ 1453  ls
+ 1454  mkdir labelImg_vipkid
+ 1455  cd labelImg_vipkid/
+ 1456  ls
+ 1457  git clone https://github.com/zhaobai62/labelImg.git
+ 1458  ls
+ 1459  git status
+ 1460  cd labelImg/
+ 1461  ls
+ 1462  git status
+ 1463  vim README.md
+ 1464  git status
+ 1465  git diff
+ 1466  git pull
+ 1467  git status
+ 1468  git add README.md
+ 1469  git status
+ 1470  git commit -m"eg"
+ 1471  git status
+ 1472  git push origin master
+ 1473  git log
+ 1474  git status
+ 1475  git log
+ 1476  git status
+ 1477  git tag
+ 1478  git check README.md
+ 1479  git checkout README.md
+ 1480  ls
+ 1481  git status
+ 1482  ls
+ 1483  vim README.md
+ 1484  git status
+ 1485  git diff
+ 1486  vim README.md
+ 1487  git status
+ 1488  git checkout README.md
+ 1489  git status
+ 1490  vim README.md
+ 1491  git -tag
+ 1492  vim ~/.ssh/id_rsa
+ 1493  vim ~/.ssh/id_rsa.pub
+ 1494  git push origin master
+
