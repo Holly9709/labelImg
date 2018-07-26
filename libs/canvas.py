@@ -167,26 +167,56 @@ class Canvas(QWidget):
                 self.hShape.highlightClear()
                 self.update()
             self.hVertex, self.hShape = None, None
-
+    def simulite_first_press(self,ev,offset):
+         pos = self.transformPos(ev.posF())
+         if not self.outOfPixmap(pos):
+             pos = self.transformPos(ev.posF())
+             #print pos.x(),pos.y()
+             pos.setX(pos.x()-offset)
+             pos.setY(pos.y()-offset)
+             #print pos.x(),pos.y()
+             self.current = Shape()
+             self.current.addPoint(pos)
+             self.line.points = [pos, pos]
+             self.setHiding()
+             self.drawingPolygon.emit(True)
+             self.update()
     def mousePressEvent(self, ev):
+        self.simulite_first_press(ev,20)
+        self.mouseMoveEvent(ev)
+        #self.simulite_first_press(ev,10)
+        #if self.current:
+           #print "len(self.current)=%d"%(len(self.current))
         pos = self.transformPos(ev.posF())
         if ev.button() == Qt.LeftButton:
             if self.drawing():
+                #print "self.drawing()"
                 if self.current and self.current.reachMaxPoints() is False:
+                    #print "self.reachMaxPoints"
+                    #self.finalise()
+                    
+                    #print "self.reachMaxPoints"
                     initPos = self.current[0]
                     minX = initPos.x()
                     minY = initPos.y()
                     targetPos = self.line[1]
                     maxX = targetPos.x()
                     maxY = targetPos.y()
+                    #print "len(self.current.points)=%d"%(len(self.current.points))
                     self.current.addPoint(QPointF(maxX, minY))
                     self.current.addPoint(targetPos)
+                    #print "len(self.current.points)=%d"%(len(self.current.points))
                     self.current.addPoint(QPointF(minX, maxY))
                     self.current.addPoint(initPos)
                     self.line[0] = self.current[-1]
                     if self.current.isClosed():
+                        #print "self.current.isClosed"
+                        #print "len(self.current)=%d"%(len(self.current))
                         self.finalise()
+                   
                 elif not self.outOfPixmap(pos):
+                    #print "not self.reachMaxPoints"
+                    
                     self.current = Shape()
                     self.current.addPoint(pos)
                     self.line.points = [pos, pos]
@@ -194,6 +224,7 @@ class Canvas(QWidget):
                     self.drawingPolygon.emit(True)
                     self.update()
             else:
+                #print "not self.drawing()"
                 self.selectShapePoint(pos)
                 self.prevPoint = pos
                 self.repaint()
@@ -201,7 +232,9 @@ class Canvas(QWidget):
             self.selectShapePoint(pos)
             self.prevPoint = pos
             self.repaint()
-
+        #if self.current:
+           #print "xxlen(self.current)=%d"%(len(self.current))
+           #print self.current.isClosed()
     def mouseReleaseEvent(self, ev):
         if ev.button() == Qt.RightButton:
             menu = self.menus[bool(self.selectedShapeCopy)]
@@ -243,6 +276,7 @@ class Canvas(QWidget):
 
     def canCloseShape(self):
         return self.drawing() and self.current and len(self.current) > 2
+        #return self.drawing() and self.current and len(self.current) > 0 
 
     def mouseDoubleClickEvent(self, ev):
         # We need at least 4 points here, since the mousePress handler
@@ -394,7 +428,8 @@ class Canvas(QWidget):
             rightBottom = self.line[1]
             rectWidth = rightBottom.x() - leftTop.x()
             rectHeight = rightBottom.y() - leftTop.y()
-            color = QColor(0, 220, 0)
+            #color = QColor(0, 220, 0)
+            color = QColor(220, 0, 0)
             p.setPen(color)
             brush = QBrush(Qt.BDiagPattern)
             p.setBrush(brush)
