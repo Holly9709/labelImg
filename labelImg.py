@@ -56,8 +56,6 @@ class WindowMixin(object):
 class MainWindow(QMainWindow, WindowMixin):
     FIT_WINDOW, FIT_WIDTH, MANUAL_ZOOM = range(3)
 
-    global idNum
-    idNum = 1
     def __init__(self, filename=None):
         super(MainWindow, self).__init__()
         self.setWindowTitle(__appname__)
@@ -74,6 +72,8 @@ class MainWindow(QMainWindow, WindowMixin):
         self.verifyImgDic = {}
         self.imagepath = None
         self.softwareMode = 'resume'
+        self.idNum = 1
+   #     self.labelMethod = 'detect'
 
         # Whether we need to save or not.
         self.dirty = False
@@ -497,6 +497,12 @@ class MainWindow(QMainWindow, WindowMixin):
     def tutorial(self):
         subprocess.Popen([self.screencastViewer, self.screencast])
 
+   # def labelMethod():
+   #     lbmd = ['detect','classify']
+   #     markmd_index =lbmd.index(self.labelMethod)
+   #     self.labelMethod = decl.[(markmd_index+1)/2]
+   #     libs.canvas.labelMethod(self.labelMethod)
+
     def showMarkPro(self):
         resuleList = ()
         resultList = libs.sql_operate.markCount()
@@ -509,7 +515,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.softwareMode = 'verify'
         print "Now the mode of the software is verify."
         libs.sql_operate.resetIdNum()
-        idNum = 0
+        self.idNum = 0
 
     def autoRight(self):
         imgFile = str(self.imagepath).split('\\')[-1]
@@ -571,9 +577,6 @@ class MainWindow(QMainWindow, WindowMixin):
         message = []
         message=libs.sql_operate.setProjectName(dialog.name())
         QMessageBox.warning(self, u'setProjectName', message[0])
-        if message[1]:
-            self.openNextImg()
-        
 
     def createShape(self):
         assert self.beginner()
@@ -1056,11 +1059,10 @@ class MainWindow(QMainWindow, WindowMixin):
         #if len(self.mImgList) <= 0:
         #   return
         
-        global idNum
         filename = None
-        if self.filename is None or idNum == 0:
+        if self.filename is None or self.idNum == 0:
             self.imagepath = libs.sql_operate.imagefromsql('C:\markimage',self.softwareMode)
-            idNum = 1
+            self.idNum = 1
             if self.imagepath not in self.mImgList: 
                 self.mImgList.append(self.imagepath)
                 filename = self.mImgList[0]
@@ -1108,7 +1110,6 @@ class MainWindow(QMainWindow, WindowMixin):
     def switchMode(self):
         #status =  readstatus('')
         #changestatus()
-        global idNum
         modeList = ['resume','no_resume','verify']
         mode_index = modeList.index(self.softwareMode)
         yes, no = QMessageBox.Yes, QMessageBox.No
@@ -1117,7 +1118,7 @@ class MainWindow(QMainWindow, WindowMixin):
             mode_index += 1
             self.softwareMode = modeList[mode_index % 3]
             libs.sql_operate.resetIdNum()
-            idNum = 0
+            self.idNum = 0
             print "Now the mode of the software is %s"% self.softwareMode
             
 

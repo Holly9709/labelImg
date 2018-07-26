@@ -19,6 +19,7 @@ class Canvas(QWidget):
     selectionChanged = pyqtSignal(bool)
     shapeMoved = pyqtSignal()
     drawingPolygon = pyqtSignal(bool)
+    labelMethod = 'detect'
 
     CREATE, EDIT = range(2)
 
@@ -167,23 +168,28 @@ class Canvas(QWidget):
                 self.hShape.highlightClear()
                 self.update()
             self.hVertex, self.hShape = None, None
+    
+    def labelMethod(labelMe):
+        self.labelMethod = labelMe
+
     def simulite_first_press(self,ev,offset):
-         pos = self.transformPos(ev.posF())
-         if not self.outOfPixmap(pos):
-             pos = self.transformPos(ev.posF())
-             #print pos.x(),pos.y()
-             pos.setX(pos.x()-offset)
-             pos.setY(pos.y()-offset)
-             #print pos.x(),pos.y()
-             self.current = Shape()
-             self.current.addPoint(pos)
-             self.line.points = [pos, pos]
-             self.setHiding()
-             self.drawingPolygon.emit(True)
-             self.update()
+        pos = self.transformPos(ev.posF())
+        if not self.outOfPixmap(pos):
+            pos = self.transformPos(ev.posF())
+            #print pos.x(),pos.y()
+            pos.setX(pos.x()-offset)
+            pos.setY(pos.y()-offset)
+            #print pos.x(),pos.y()
+            self.current = Shape()
+            self.current.addPoint(pos)
+            self.line.points = [pos, pos]
+            self.setHiding()
+            self.drawingPolygon.emit(True)
+            self.update()
     def mousePressEvent(self, ev):
-        self.simulite_first_press(ev,20)
-        self.mouseMoveEvent(ev)
+        if self.labelMethod == 'classify':
+            self.simulite_first_press(ev,20)
+            self.mouseMoveEvent(ev)
         #self.simulite_first_press(ev,10)
         #if self.current:
            #print "len(self.current)=%d"%(len(self.current))

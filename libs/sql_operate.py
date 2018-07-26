@@ -9,7 +9,8 @@ import random
 
 global oneInNum
 global project_name
-project_name='test'
+#project_name='test0720'
+project_name='test0724'
 global db
 global idNum
 idNum = 0
@@ -17,24 +18,28 @@ global idNumSelect
 
 def con_db():
     global project_name
-    hostName = "xxx.xx.xx.xx"
-    userName = "user"
-    passWord = "xxxxxx"
+    hostName = "172.23.250.51"
+    userName = "root"
+    passWord = "20180712"
+    #dataBase = "ground_truth"
     dataBase = project_name
     charset = "utf8"
     db = MySQLdb.connect("%s"%(hostName), "%s"%(userName), "%s"%(passWord), "%s"%(dataBase), charset='utf8' )
     
     global oneInNum
     oneInNum = 20
+    global idNum
+    idNum = 0
     
     return db
+
 db = con_db()
 def setProjectName(projectNameNew):
     global project_name,db
     project_name_old=project_name
     #project_name = str(projectNameNew)
     #cursor = db.cursor()
-    #cursor.execute("use %s"%(projectName))
+    #cursor_execute("use %s"%(projectName))
     db.close()
     message = []
     try:
@@ -67,14 +72,14 @@ def insert2sql(xmlfile):
     #sql = "SELECT xml_content FROM pngtry WHERE image_name = '%s'"%(image_name)
     
     sql = "SELECT xml_content FROM %sxml WHERE image_name = '%s'"%(project_name,image_name)
-    is_null = cursor.execute(sql)    
+    is_null = cursor_execute(sql)    
 
-    if is_null == 0:
+    if is_null == None:
         sql = "INSERT INTO %sxml (image_name, xml_content) VALUES ('%s','%s')"%(project_name,image_name,xml_content)
     else:
         sql = "UPDATE %sxml SET xml_content = '%s' WHERE image_name = '%s'" % (project_name,xml_content, image_name)
         
-    cursor.execute(sql) 
+    cursor_execute(sql) 
     
     # db.close()
     
@@ -82,10 +87,26 @@ def insert2sql(xmlfile):
     #db = con_db()
     #cursor = db.cursor()
     
-    #cursor.execute("UPDATE %simg SET is_marking = 'done' WHERE image_name = '%s'"%(project_name,image_name))
+    #cursor_execute("UPDATE %simg SET is_marking = 'done' WHERE image_name = '%s'"%(project_name,image_name))
     #print "%s xml file has update in database."% image_name
 
     db.commit()  
+
+def cursor_execute(sqlstr):
+    global db
+    cursor = db.cursor()
+    content=None
+    try:
+        #sql = "SELECT xml_content FROM %sxml WHERE image_name = '%s'"%(project_name,image_name)
+        #sql = "SELECT xml_content FROM %sxml WHERE image_name = '%s'"%(project_name,image_name)
+        cursor.execute(sqlstr)
+        content = cursor.fetchone()
+    except Exception as e:
+        print sqlstr
+        print e
+    return content
+
+
 
 def xmlfromsql(xmlpath):
     global project_name
@@ -98,23 +119,23 @@ def xmlfromsql(xmlpath):
     #print image_name 
     #sql = "SELECT xml_content FROM pngtry WHERE image_name = '%s'"%(image_name)
     sql = "SELECT xml_content FROM %sxml WHERE image_name = '%s'"%(project_name,image_name)
-    
-    xml_content = cursor.execute(sql)
-
-    if xml_content == 0:
+    #xml_content = cursor_execute(sql)
+    xml_content=cursor_execute(sql)
+    print "xml content:",xml_content
+    if xml_content == None:
         return
     else:
         if not os.path.isfile(xmlpath):     
             fout = open(xmlpath,'wb')
             fout.write("")
-            fout.write(cursor.fetchone()[0])
+            fout.write(xml_content[0])
             fout.close()
             print "The xml file have downloaded form database."
         else:
             return
     
     db.commit()
-    cursor.close()
+    #cursor.close()
 
 def resetIdNum():
     global idNum
@@ -126,44 +147,45 @@ def imagefromsql(dirpath, softwareMode = 'resume'):
     global db
     global idNum
     global idNumSelect
-    cursor = db.cursor()
 
     if softwareMode == 'verify':
         global oneInNum
-        #cursor.execute("SELECT image_name FROM pngtry WHERE (is_marking = 'done' and if_verify = 'no') LIMIT %d"% oneInNum)
-        cursor.execute("SELECT count(*) FROM %simg WHERE (is_marking = 'done' and if_verify = 'no') "%(project_name))
-        remainNum = cursor.fetchone()[0]
+        #cursor_execute("SELECT image_name FROM pngtry WHERE (is_marking = 'done' and if_verify = 'no') LIMIT %d"% oneInNum)
+        cursor_content = cursor_execute("SELECT count(*) FROM %simg WHERE (is_marking = 'done' and if_verify = 'no') "%(project_name))
+        remainNum = cursor_content[0]
         if remainNum == 0:
             print "No more picture!"
             return
         elif remainNum > 0 and remainNum < oneInNum:
             oneInNum = remainNum
         
-        if idNum == 0:
-            cursor.execute("SELECT id FROM %simg WHERE (is_marking = 'done' and if_verify = 'no') ORDER BY id LIMIT 1"%(project_name))
-            idNum = cursor.fetchone()[0]
+        
+        cursor = db.cursor()
+        cursor.execute("SELECT id FROM %simg WHERE (is_marking = 'done' and if_verify = 'no') ORDER BY id LIMIT 20"%(project_name))
+        idTuple = tuple(cursor.fetchall())
+        print"id tuple:", idTuple
         select = random.randint(0, oneInNum-1)
-        print idNum
-        idNumSelect = idNum + select
-        cursor.execute("SELECT image_name FROM %simg WHERE id = %d"%(project_name, idNumSelect))
-        image_name = cursor.fetchone()[0]
+        #idTuple is two-dimensional tuple
+        idNumSelect = idTuple[select][0]
+        cursor = cursor_execute("SELECT image_name FROM %simg WHERE id = %d"%(project_name, idNumSelect))
+        image_name = cursor[0]
         print "Now the id of image which you are checking is %d."% idNumSelect
         #print "imgname_list[0][0]: ", imgname_list[0][0]
         imagepath = str(dirpath)+'\\'+str(image_name)+'.png'
     
         if not os.path.isfile(imagepath):
-            #cursor.execute("SELECT raw_data FROM pngtry WHERE image_name = '%s'"% image_name)
-            cursor.execute("SELECT raw_data FROM %simg WHERE id = %d"%(project_name, idNumSelect))
+            #cursor_execute("SELECT raw_data FROM pngtry WHERE image_name = '%s'"% image_name)
+            cursor = cursor_execute("SELECT raw_data FROM %simg WHERE id = %d"%(project_name, idNumSelect))
 
             fout = open(imagepath,'wb')
-            fout.write(cursor.fetchone()[0])
+            fout.write(cursor[0])
             print "The image whose id in table is %d have downloaded from database."% idNumSelect      
-            #cursor.execute("UPDATE pngtry SET is_marking = 'yes' WHERE image_name = '%s'"% image_name)
+            #cursor_execute("UPDATE pngtry SET is_marking = 'yes' WHERE image_name = '%s'"% image_name)
 
     elif softwareMode == 'no_resume':
         
-        cursor.execute("SELECT count(*) FROM %simg"%(project_name))
-        allImgNum = cursor.fetchone()[0]
+        cursor = cursor_execute("SELECT count(*) FROM %simg"%(project_name))
+        allImgNum = cursor[0]
         print "The number of all image :", allImgNum
         if allImgNum < idNum:
             print "No more picture!"
@@ -171,56 +193,56 @@ def imagefromsql(dirpath, softwareMode = 'resume'):
         
         if idNum == 0:
             idNum += 1
-        cursor.execute("SELECT image_name FROM %simg WHERE id = %d ORDER BY id LIMIT 1"%(project_name, idNum))
-        image_name = (cursor.fetchone()[0])
+        cursor = cursor_execute("SELECT image_name FROM %simg WHERE id = %d ORDER BY id LIMIT 1"%(project_name, idNum))
+        image_name = (cursor[0])
         #print "image_name: ",image_name
         imagepath = str(dirpath)+'\\'+str(image_name)+'.png'
     
         if not os.path.isfile(imagepath):
-            #cursor.execute("SELECT raw_data FROM pngtry WHERE image_name = '%s'"% image_name)
-            cursor.execute("SELECT raw_data FROM %simg WHERE id = %d "%(project_name, idNum))
+            #cursor_execute("SELECT raw_data FROM pngtry WHERE image_name = '%s'"% image_name)
+            cursor = cursor_execute("SELECT raw_data FROM %simg WHERE id = %d "%(project_name, idNum))
 
             fout = open(imagepath,'wb')
-            fout.write(cursor.fetchone()[0])
+            fout.write(cursor[0])
             print "The image whose id in table is %d have downloaded from database."% idNum
         
         idNum += 1   
-            #cursor.execute("UPDATE pngtry SET is_marking = 'yes' WHERE image_name = '%s'"% image_name)    
+            #cursor_execute("UPDATE pngtry SET is_marking = 'yes' WHERE image_name = '%s'"% image_name)    
         
     elif softwareMode == 'resume':
         
-        cursor.execute("SELECT count(*) FROM %simg"%(project_name))
-        allImgNum = cursor.fetchone()[0]
-        cursor.execute("SELECT count(*) FROM %simg WHERE is_marking = 'no'"%(project_name))
-        remainNum = cursor.fetchone()[0]
+        cursor = cursor_execute("SELECT count(*) FROM %simg"%(project_name))
+        allImgNum = cursor[0]
+        cursor = cursor_execute("SELECT count(*) FROM %simg WHERE is_marking = 'no'"%(project_name))
+        remainNum = cursor[0]
         markedNum = allImgNum - remainNum
         print "%d images have been marked."% markedNum
         if remainNum == 0:
             print "No more picture!"
             return
-        #cursor.execute("SELECT image_name FROM pngtry WHERE is_marking ='no' LIMIT 1")
-        cursor.execute("SELECT id FROM %simg WHERE is_marking ='no' ORDER BY id LIMIT 1"%(project_name))
-        idNum = cursor.fetchone()[0]
-        cursor.execute("SELECT image_name FROM %simg WHERE id = %d LIMIT 1"%(project_name, idNum))
-        image_name = cursor.fetchone()[0]
+        #cursor_execute("SELECT image_name FROM pngtry WHERE is_marking ='no' LIMIT 1")
+        cursor = cursor_execute("SELECT id FROM %simg WHERE is_marking ='no' ORDER BY id LIMIT 1"%(project_name))
+        idNum = cursor[0]
+        cursor = cursor_execute("SELECT image_name FROM %simg WHERE id = %d LIMIT 1"%(project_name, idNum))
+        image_name = cursor[0]
         #print "image_name: ",image_name
         imagepath = str(dirpath)+'\\'+str(image_name)+'.png'
     
         if not os.path.isfile(imagepath):
-            #cursor.execute("SELECT raw_data FROM pngtry WHERE image_name = '%s'"% image_name)
-            cursor.execute("SELECT raw_data FROM %simg WHERE id = %d"%(project_name, idNum))
+            #cursor_execute("SELECT raw_data FROM pngtry WHERE image_name = '%s'"% image_name)
+            cursor = cursor_execute("SELECT raw_data FROM %simg WHERE id = %d"%(project_name, idNum))
 
             fout = open(imagepath,'wb')
-            fout.write(cursor.fetchone()[0])
+            fout.write(cursor[0])
             print "The image whose id in table is %d have downloaded from database."% idNum
-            #cursor.execute("UPDATE pngtry SET is_marking = 'yes' WHERE image_name = '%s'"% image_name)    
+            #cursor_execute("UPDATE pngtry SET is_marking = 'yes' WHERE image_name = '%s'"% image_name)    
             
-            cursor.execute("UPDATE %simg SET is_marking = 'done' WHERE id = %d"%(project_name, idNum))
+            cursor_execute("UPDATE %simg SET is_marking = 'done' WHERE id = %d"%(project_name, idNum))
             print "The is_marking status has update to 'done' in database."
             idNum += 1
             
     db.commit()
-    cursor.close()
+    #cursor.close()
     return imagepath
 
 def veriResult(imgName, result):
@@ -231,21 +253,25 @@ def veriResult(imgName, result):
     global oneInNum
     
     cursor = db.cursor()
-    #cursor.execute("UPDATE pngtry SET if_verify = '%s' WHERE image_name = '%s'"%(result, imgName))
-    cursor.execute("UPDATE %simg SET if_verify = '%s' WHERE id = %d"%(project_name,result, idNumSelect))
+    #cursor_execute("UPDATE pngtry SET if_verify = '%s' WHERE image_name = '%s'"%(result, imgName))
+    cursor.execute("SELECT id FROM %simg WHERE (is_marking = 'done' and if_verify = 'no') ORDER BY id LIMIT 20"%(project_name))
+    idNumListTuple = list(tuple(cursor.fetchall()))
+    idNumList = []
+    for i in range(0,oneInNum):
+        idNumList.append(idNumListTuple[i][0])
+    print"id list:", idNumList 
+    cursor_execute("UPDATE %simg SET if_verify = '%s' WHERE id = %d"%(project_name,result, idNumSelect))
 
-    #cursor.execute("SELECT image_name FROM pngtry WHERE (is_marking = 'done' and if_verify = 'no') LIMIT %d"% (oneInNum-1))
-    idNumList = range(idNum, idNum+oneInNum)
-    print idNumList
+    #cursor_execute("SELECT image_name FROM pngtry WHERE (is_marking = 'done' and if_verify = 'no') LIMIT %d"% (oneInNum-1))
+    print "idNumSelect: ", idNumSelect
     idNumList.remove(idNumSelect)
-    print "set jump tuple lenfgth:", len(idNumList)
-    print idNumList
+    #print "set jump tuple lenfgth:", len(idNumList)
+    print "id list2:", idNumList
     for i in idNumList:
-        #cursor.execute("UPDATE pngtry SET if_verify = 'jump' WHERE image_name = '%s'"% imgname_list[i][0])
-        cursor.execute("UPDATE %simg SET if_verify = 'jump' WHERE id = %d"%(project_name,i))
-    idNum += oneInNum
+        #cursor_execute("UPDATE pngtry SET if_verify = 'jump' WHERE image_name = '%s'"% imgname_list[i][0])
+        cursor_execute("UPDATE %simg SET if_verify = 'jump' WHERE id = %d"%(project_name,i))
     db.commit()
-    cursor.close()
+    #cursor.close()
 
 def veriCount():
     global project_name
@@ -253,22 +279,22 @@ def veriCount():
     #list :rightNum, wrongNum, rate,veriNum,tabelVeriNum, allImgNum, veriRate
     cursor = db.cursor()
     resultList = ()
-    cursor.execute("SELECT count(*) FROM %simg WHERE if_verify = '%s'"%(project_name, 'is_verified_right'))
-    rightNum = cursor.fetchone()[0]
+    cursor = cursor_execute("SELECT count(*) FROM %simg WHERE if_verify = '%s'"%(project_name, 'is_verified_right'))
+    rightNum = cursor[0]
     #resultList.append(rightNum)
-    cursor.execute("SELECT count(*) FROM %simg WHERE if_verify = '%s'"%(project_name, 'is_verified_wrong'))
-    wrongNum = cursor.fetchone()[0]
+    cursor = cursor_execute("SELECT count(*) FROM %simg WHERE if_verify = '%s'"%(project_name, 'is_verified_wrong'))
+    wrongNum = cursor[0]
     #resultList.append(wrongNum)
     veriNum = rightNum + wrongNum
     rate = float(rightNum) / float(veriNum)
     rate = '%.3f'% rate
     #resultList.append(rate)
     #resultList.append(veriNum)
-    cursor.execute("SELECT count(*) FROM %simg WHERE if_verify != 'no'"%(project_name))
-    tabelVeriNum = cursor.fetchone()[0]
+    cursor = cursor_execute("SELECT count(*) FROM %simg WHERE if_verify != 'no'"%(project_name))
+    tabelVeriNum = cursor[0]
     #resultList.append(tabelVeriNum)
-    cursor.execute("SELECT count(*) FROM %simg WHERE is_marking = 'done'"%(project_name))
-    allImgNum = cursor.fetchone()[0]
+    cursor = cursor_execute("SELECT count(*) FROM %simg WHERE is_marking = 'done'"%(project_name))
+    allImgNum = cursor[0]
     #resultList.append(allImgNum)
     veriRate = float(tabelVeriNum) / float(allImgNum)
     veriRate = '%.2f'% veriRate
@@ -276,7 +302,7 @@ def veriCount():
     resultList = (rightNum, wrongNum, rate,veriNum,tabelVeriNum, allImgNum, veriRate)
     
     db.commit()
-    cursor.close()
+    #cursor.close()
     return resultList
 
 def markCount():
@@ -286,10 +312,10 @@ def markCount():
     #list :markNum, allNum, markRate
     cursor = db.cursor()
     resultList = ()
-    cursor.execute("SELECT count(*) FROM %simg WHERE is_marking = 'done'"%(project_name))
-    markNum = cursor.fetchone()[0]
-    cursor.execute("SELECT count(*) FROM %simg "%(project_name))
-    allNum = cursor.fetchone()[0]
+    cursor = cursor_execute("SELECT count(*) FROM %simg WHERE is_marking = 'done'"%(project_name))
+    markNum = cursor[0]
+    cursor = cursor_execute("SELECT count(*) FROM %simg "%(project_name))
+    allNum = cursor[0]
     markRate = float(markNum) / float(allNum)
     markRate = '%.2f'% markRate
     resultList = (markNum, allNum, markRate)
