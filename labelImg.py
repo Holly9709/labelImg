@@ -28,7 +28,9 @@ from libs.colorDialog import ColorDialog
 from libs.labelFile import LabelFile, LabelFileError
 from libs.toolBar import ToolBar
 from libs.pascal_voc_io import PascalVocReader
-import libs.sql_operate
+import libs.sql_operate as lso
+import libs.tools
+import libs.roc
 from libs.ask_dialog import AskDialog
 __appname__ = 'labelImg'
 
@@ -228,6 +230,11 @@ class MainWindow(QMainWindow, WindowMixin):
                 'Ctrl+J','hide',u'wrong')
         showResults = action('&Show\nresults', self.show_results, 
                 u'Show Results')
+        calculateRocCurve = action('&Calculate\nROC\ncurve', self.calculateRocCurve)
+        getProjectData = action('&Get\nproject\ndata', self.getProjectData)
+        xmlToTxt_wh = action('&Transform xml to txt (wh)',self.xmlToTxt_wh, u'xmin, ymin, weight, height')
+        xmlToTxt_xy = action('&Transform xml to txt (xy)',self.xmlToTxt_xy, u'xmin, ymin, xmax, ymax')
+        txtToXml = action('&Transform txt to xml',self.txtToXml)
 
         zoom = QWidgetAction(self)
         zoom.setDefaultWidget(self.zoomWidget)
@@ -304,6 +311,8 @@ class MainWindow(QMainWindow, WindowMixin):
                 edit=self.menu('&Edit'),
                 view=self.menu('&View'),
                 verify=self.menu('&Verify'),
+                evaluate = self.menu('&Evaluate'),
+                tools = self.menu('&Tool'),
                 help=self.menu('&Help'),
                 recentFiles=QMenu('Open &Recent'),
                 labelList=labelMenu)
@@ -312,6 +321,9 @@ class MainWindow(QMainWindow, WindowMixin):
                 (open, opendir,changeSavedir, enterProjectName,openAnnotation, self.menus.recentFiles, save, saveAs, close, None, quit))
         addActions(self.menus.help, (help,))
         addActions(self.menus.verify, (verify, right, wrong, showResults))
+        addActions(self.menus.evaluate, (calculateRocCurve,))
+        addActions(self.menus.tools, (getProjectData, xmlToTxt_wh,xmlToTxt_xy,txtToXml))
+
         
         self.singleClassMode = QAction("Single Class Mode", self)
         self.singleClassMode.setShortcut("Ctrl+Shift+S")
@@ -505,7 +517,7 @@ class MainWindow(QMainWindow, WindowMixin):
 
     def showMarkPro(self):
         resuleList = ()
-        resultList = libs.sql_operate.markCount()
+        resultList = lso.markCount()
         yes = QMessageBox.Yes
         msg = u'Mark ratio: %s / %s = %s '% resultList
         if yes == QMessageBox.warning(self, u'Show mark progress', msg, yes):
@@ -514,7 +526,7 @@ class MainWindow(QMainWindow, WindowMixin):
     def verify(self):
         self.softwareMode = 'verify'
         print "Now the mode of the software is verify."
-        libs.sql_operate.resetIdNum()
+        lso.resetIdNum()
         self.idNum = 0
 
     def autoRight(self):
@@ -523,7 +535,7 @@ class MainWindow(QMainWindow, WindowMixin):
         if self.verifyImgDic.has_key(imgName):
             return
         else:
-            libs.sql_operate.veriResult(imgName,'is_verified_right')
+            lso.veriResult(imgName,'is_verified_right')
             print "You have set the status of the image as right!"
 
     def right(self):
@@ -531,7 +543,7 @@ class MainWindow(QMainWindow, WindowMixin):
         imgName = imgFile[:-4]
         if self.verifyImgDic.has_key(imgName):
             del self.verifyImgDic[imgName]
-        libs.sql_operate.veriResult(imgName,'is_verified_right')
+        lso.veriResult(imgName,'is_verified_right')
         print "You have set the status of the image as right!"
 
 
@@ -539,7 +551,7 @@ class MainWindow(QMainWindow, WindowMixin):
         imgFile = str(self.imagepath).split('\\')[-1]
         imgName = imgFile[:-4]
         self.verifyImgDic[imgName] = 'wrong'
-        libs.sql_operate.veriResult(imgName,'is_verified_wrong')
+        lso.veriResult(imgName,'is_verified_wrong')
         print "You have set the status of the image as wrong!"
         yes, no = QMessageBox.Yes, QMessageBox.No
         msg = u'You have set the image as wrong'
@@ -555,7 +567,7 @@ class MainWindow(QMainWindow, WindowMixin):
         #    elif value == 'wrong':
         #        wrongNum += 1
         resultList = ()
-        resultList = libs.sql_operate.veriCount()
+        resultList = lso.veriCount()
         #print resultList
         #print "Now the number of right marking image is: ", rightNum
         #print "Now the number of wrong marking image is: ", wrongNum
@@ -573,11 +585,138 @@ class MainWindow(QMainWindow, WindowMixin):
         #        QtGui.QStandardItem(str(dialog.age())),
         #        ))
         dialog.exec_()
-        print("projectname=%s"%(dialog.name())) 
-        message = []
-        message=libs.sql_operate.setProjectName(dialog.name())
-        QMessageBox.warning(self, u'setProjectName', message[0])
+        if dialog.name() == '':
+            return False
+        else:
+            print("projectname=%s"%(dialog.name())) 
+            message = []
+            message=lso.setProjectName(dialog.name())
+            QMessageBox.warning(self, u'setProjectName', message[0])
+            if message[1]:
+                #connect database successfully
+                return True
+            else:
+                return False
+    
+    def calculateRocCurve(self):
+        print "trigger calculateRocCurve function."
+        if self.enterProjectName():
+            
+            path = '.'
+            dirpath = unicode(QFileDialog.getExistingDirectory(self,
+            '%s - Save to the directory' % __appname__, path,  QFileDialog.ShowDirsOnly
+                                                | QFileDialog.DontResolveSymlinks))
 
+            if dirpath is not None and len(dirpath) > 1:
+                saveDir = dirpath
+                #print saveDir
+                
+                testImgPath = lso.allImgFromDb(saveDir)
+                #download xml file from databases which is labelling by person.
+                personXmlPath = lso.allXmlFromDb(saveDir)
+                
+                #get the cascadexml file
+                filters = "Open Cascade XML file (%s)" % \
+                    ' '.join(['*.xml'])
+                cascadeXmlPath = unicode(QFileDialog.getOpenFileName(self,
+                 '%s - Choose Cascade Xml file' % __appname__, path, filters))
+                
+                #detect the image refer to cascade model and get txt file.
+                evaluateTxtPath = os.path.join(saveDir, 'evaluateTxt')
+                libs.tools.detect(testImgPath, cascadeXmlPath, evaluateTxtPath)
+                
+                #convert evaluateTxt to xml
+                evaluateXmlPath = os.path.join(saveDir, 'evaluateXml') 
+                libs.tools.Transform_txt_xml(evaluateTxtPath, evaluateXmlPath)
+                
+                #all files are ready, use roc function to calculate roc curve
+                libs.roc.roc(personXmlPath, evaluateXmlPath, saveDir)
+
+                print "IOU and roc results have been saved to %s"%(saveDir)
+                QMessageBox.information(self, u'Evaluate completed', u"IOU and roc results have been saved to %s"%(saveDir))
+        
+
+    def getProjectData(self):
+        print "trigger getProjectData function."
+        #self.enterProjectName()
+        if self.enterProjectName():
+            
+            path = '.'
+            dirpath = unicode(QFileDialog.getExistingDirectory(self,
+            '%s - Save to the directory' % __appname__, path,  QFileDialog.ShowDirsOnly
+                                                | QFileDialog.DontResolveSymlinks))
+
+            if dirpath is not None and len(dirpath) > 1:
+                saveDir = dirpath
+                print saveDir
+                lso.allImgFromDb(saveDir)
+                lso.allXmlFromDb(saveDir)
+                
+                print "Images and xml files have been saved to %s"%(saveDir)
+                QMessageBox.information(self, u'Download completed', u"Images and xml files have been saved to %s"%(saveDir))
+
+
+    def xmlToTxt_wh(self):
+        print "trigger xmlToTxt_wh function."
+        path = '.'
+        #get the xml file path
+        dirpath = unicode(QFileDialog.getExistingDirectory(self,
+        '%s - Choose the xml directory' % __appname__, path,  QFileDialog.ShowDirsOnly
+                                     | QFileDialog.DontResolveSymlinks))
+
+        if dirpath is not None and len(dirpath) > 1:
+            xmlDirPath = dirpath
+            print "xml dirctory path: ", xmlDirPath
+        dirpath = unicode(QFileDialog.getExistingDirectory(self,
+        '%s - Choose the txt directory' % __appname__, path,  QFileDialog.ShowDirsOnly
+                                     | QFileDialog.DontResolveSymlinks))
+
+        if dirpath is not None and len(dirpath) > 1:
+            txtDirPath = dirpath
+            print "txt directory path: ", txtDirPath
+
+        libs.tools.Transform_xml_txt_wh(xmlDirPath, txtDirPath)
+    
+    def xmlToTxt_xy(self):
+        print "trigger xmlToTxti_xy function."
+        path = '.'
+        #get the xml file path
+        dirpath = unicode(QFileDialog.getExistingDirectory(self,
+        '%s - Choose the xml directory' % __appname__, path,  QFileDialog.ShowDirsOnly
+                                     | QFileDialog.DontResolveSymlinks))
+
+        if dirpath is not None and len(dirpath) > 1:
+            xmlDirPath = dirpath
+            print "xml dirctory path: ", xmlDirPath
+        dirpath = unicode(QFileDialog.getExistingDirectory(self,
+        '%s - Choose the txt directory' % __appname__, path,  QFileDialog.ShowDirsOnly
+                                     | QFileDialog.DontResolveSymlinks))
+
+        if dirpath is not None and len(dirpath) > 1:
+            txtDirPath = dirpath
+            print "txt directory path: ", txtDirPath
+
+        libs.tools.Transform_xml_txt_xy(xmlDirPath, txtDirPath)
+
+    def txtToXml(self):
+        print "trigger txtToXml function."
+        path = '.'
+        #get the txt file path
+        dirpath = unicode(QFileDialog.getExistingDirectory(self,
+        '%s - Choose the txt directory' % __appname__, path,  QFileDialog.ShowDirsOnly
+                                     | QFileDialog.DontResolveSymlinks))
+
+        if dirpath is not None and len(dirpath) > 1:
+            txtDirPath = dirpath
+        dirpath = unicode(QFileDialog.getExistingDirectory(self,
+        '%s - Choose the xml directory' % __appname__, path,  QFileDialog.ShowDirsOnly
+                                     | QFileDialog.DontResolveSymlinks))
+
+        if dirpath is not None and len(dirpath) > 1:
+            xmlDirPath = dirpath
+
+        libs.tools.Transform_txt_xml(txtDirPath, xmlDirPath)
+        
     def createShape(self):
         assert self.beginner()
         self.canvas.setEditing(False)
@@ -904,7 +1043,7 @@ class MainWindow(QMainWindow, WindowMixin):
             event.ignore()
         else:
             print "closeEvent"
-            libs.sql_operate.delfile()
+            lso.delfile()
 
         s = self.settings
         # If it loads images from dir, don't load it at the begining
@@ -932,7 +1071,7 @@ class MainWindow(QMainWindow, WindowMixin):
         
         #print "closeEvent"
         #if self.mayContinue():
-        #libs.sql_operate.delfile()
+        #lso.delfile()
         #    print "del"
         #else:
         #    print "not del"
@@ -1061,7 +1200,7 @@ class MainWindow(QMainWindow, WindowMixin):
         
         filename = None
         if self.filename is None or self.idNum == 0:
-            self.imagepath = libs.sql_operate.imagefromsql('C:\markimage',self.softwareMode)
+            self.imagepath = lso.imagefromsql('C:\markimage',self.softwareMode)
             self.idNum = 1
             if self.imagepath not in self.mImgList: 
                 self.mImgList.append(self.imagepath)
@@ -1070,7 +1209,7 @@ class MainWindow(QMainWindow, WindowMixin):
             if self.filename == self.mImgList[-1]: 
                 if self.softwareMode == 'verify':
                     self.autoRight()
-                self.imagepath = libs.sql_operate.imagefromsql('C:\markimage',self.softwareMode)
+                self.imagepath = lso.imagefromsql('C:\markimage',self.softwareMode)
                 if self.imagepath not in self.mImgList: 
                     self.mImgList.append(self.imagepath)
             currIndex = self.mImgList.index(self.filename)
@@ -1117,7 +1256,7 @@ class MainWindow(QMainWindow, WindowMixin):
         if yes == QMessageBox.warning(self, u'Switch mode', msg, yes|no):
             mode_index += 1
             self.softwareMode = modeList[mode_index % 3]
-            libs.sql_operate.resetIdNum()
+            lso.resetIdNum()
             self.idNum = 0
             print "Now the mode of the software is %s"% self.softwareMode
             
@@ -1254,7 +1393,7 @@ class MainWindow(QMainWindow, WindowMixin):
         if self.filename is None:
             return
         
-        libs.sql_operate.xmlfromsql(xmlPath)
+        lso.xmlfromsql(xmlPath)
         
         if os.path.isfile(xmlPath) is False:
             return

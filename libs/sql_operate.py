@@ -18,9 +18,9 @@ global idNumSelect
 
 def con_db():
     global project_name
-    hostName = "172.23.250.51"
+    hostName = "xxx.xx.xxx.xx"
     userName = "root"
-    passWord = "20180712"
+    passWord = "xxxxxx"
     #dataBase = "ground_truth"
     dataBase = project_name
     charset = "utf8"
@@ -41,6 +41,7 @@ def setProjectName(projectNameNew):
     #cursor = db.cursor()
     #cursor_execute("use %s"%(projectName))
     db.close()
+    #message have two informations:the status of project_name,and True/False(to introduct the following action)
     message = []
     try:
         project_name = str(projectNameNew)
@@ -57,6 +58,7 @@ def setProjectName(projectNameNew):
         db=con_db()
     print message
     return message
+##insert the xml file to databases.
 def insert2sql(xmlfile):
     global project_name 
     global db
@@ -80,15 +82,6 @@ def insert2sql(xmlfile):
         sql = "UPDATE %sxml SET xml_content = '%s' WHERE image_name = '%s'" % (project_name,xml_content, image_name)
         
     cursor_execute(sql) 
-    
-    # db.close()
-    
-    #connect image database to change "is_marking" state.
-    #db = con_db()
-    #cursor = db.cursor()
-    
-    #cursor_execute("UPDATE %simg SET is_marking = 'done' WHERE image_name = '%s'"%(project_name,image_name))
-    #print "%s xml file has update in database."% image_name
 
     db.commit()  
 
@@ -193,8 +186,9 @@ def imagefromsql(dirpath, softwareMode = 'resume'):
         
         if idNum == 0:
             idNum += 1
-        cursor = cursor_execute("SELECT image_name FROM %simg WHERE id = %d ORDER BY id LIMIT 1"%(project_name, idNum))
-        image_name = (cursor[0])
+        cursor = cursor_execute("SELECT id, image_name FROM %simg WHERE id >= %d ORDER BY id LIMIT 1"%(project_name, idNum))
+        idNum = cursor[0]
+        image_name = cursor[1]
         #print "image_name: ",image_name
         imagepath = str(dirpath)+'\\'+str(image_name)+'.png'
     
@@ -205,8 +199,6 @@ def imagefromsql(dirpath, softwareMode = 'resume'):
             fout = open(imagepath,'wb')
             fout.write(cursor[0])
             print "The image whose id in table is %d have downloaded from database."% idNum
-        
-        idNum += 1   
             #cursor_execute("UPDATE pngtry SET is_marking = 'yes' WHERE image_name = '%s'"% image_name)    
         
     elif softwareMode == 'resume':
@@ -352,5 +344,157 @@ def delfile():
                 shutil.rmtree(filePath,True)
         os.rmdir(delDir)
         print "Directory: " + delDir +" was removed!"
+
+#This function can download all images refer the input projectName
+#Both parameters are entered from the software window
+def allImgFromDb(projectDirPath):
+    
+    global db
+    cursor = db.cursor()
+    global project_name
+    projectName = project_name
+    #make a directory "projectnameimg"
+    imgDirPath = os.path.join(projectDirPath, '%simg'%projectName)
+    isExists = os.path.exists(imgDirPath)
+    if not isExists:
+        os.makedirs(imgDirPath)
+        print "%simg folder is created successfully."%projectName
+    
+    #get the img count in database
+    cursor.execute("SELECT count(*) FROM %simg"% (projectName))
+    imgNum = cursor.fetchone()[0]
+    print "The project have %d img."% imgNum
+    #get the img_raw_data refer to idNum
+    idNum = 1
+    
+    #for i in range(0, imgNum):
+    for i in range(0, imgNum):
+        
+        sql = "SELECT id, raw_data FROM %simg WHERE id >= %d ORDER BY id LIMIT 1"%(projectName, idNum)
+        cursor.execute(sql)
+        content = cursor.fetchall()
+        #content: ((id, raw_data), )
+        idNum = content[0][0]
+        
+        #if there isn't content, len(content) = 0
+        if len(content) < 1:
+            print "Id %d imgdatabese have no content."% idNum
+        else:
+            #get the image_name to set the imgfile name.
+            cursor.execute("SELECT image_name FROM %simg WHERE id = %d"% (projectName, idNum))
+            image_name = cursor.fetchone()[0]
+            imgfile = str(image_name) + '.png'
+            imgPath = os.path.join(imgDirPath, imgfile)
+            #print "imgfile", imgfile
+            if not os.path.isfile(imgPath):
+                fout = open(imgPath,'wb')
+                #print "os.path.join('%simg'%project_name, imgfile)", os.path.join('%sxml'%project_name, xmlfile)
+                fout.write(content[0][1])
+                fout.close()
+                print "Id %d img file have been downloaded form database."% idNum
+        idNum += 1
+    db.commit()
+    cursor.close()
+    return imgDirPath
+    
+#This function can download all xml file refer the input projectName
+#Both parameters are entered from the software window
+def allXmlFromDb(projectDirPath):
+    
+    global db
+    cursor = db.cursor()
+    global project_name
+    projectName = project_name
+    
+    #make a directory "projectnamexml"
+    xmlDirPath = os.path.join(projectDirPath, '%sxml'%projectName)
+    isExists = os.path.exists(xmlDirPath)
+    if not isExists:
+        os.makedirs(xmlDirPath)
+        print "%sxml folder is created successfully."%projectName
+    
+    #get the xml file count in database
+    #cursor.execute("SELECT count(*) FROM %sxml"% (projectName))
+    print "SELECT count(*) FROM %sxml"% (projectName)
+    cursor.execute("SELECT count(*) FROM %sxml"% (projectName))
+    xmlNum = cursor.fetchone()[0]
+    print "The project have %d xml."% xmlNum
+    #get the xml_content refer to idNum
+    idNum = 1
+    
+    for i in range(0, xmlNum):
+    #for i in range(0, 1):
+        
+        sql = "SELECT id, xml_content FROM %sxml WHERE id >= %d ORDER BY id LIMIT 1"%(projectName, idNum)
+        cursor.execute(sql)
+        content = cursor.fetchall()
+        #content: ((id, xml_content), )
+        idNum = content[0][0]
+        print "idNum", idNum
+        
+        #if no content, len(content) = 0
+        if len(content) < 1:
+            print "Id %d xmldatabese have no content."% idNum
+        else:
+            #get the image_name to set the xmlfile name.
+            cursor.execute("SELECT image_name FROM %sxml WHERE id = %d"% (projectName, idNum))
+            image_name = cursor.fetchone()[0]
+            xmlfile = str(image_name) + '.xml'
+            #print "xmlfile", xmlfile
+            if not os.path.isfile(xmlfile):
+                fout = open(os.path.join(xmlDirPath, xmlfile),'wb')
+                #print "os.path.join('%sxml'%project_name, xmlfile)", os.path.join('%sxml'%project_name, xmlfile)
+                fout.write(content[0][1])
+                fout.close()
+                print "Id %d xml file have downloaded form database."% idNum
+        idNum += 1
+    db.commit()
+    cursor.close()
+    return xmlDirPath
+
+def Transform_txt_xml(pre_file,after_file):
+    line=[]
+    
+    files1 =os.listdir(pre_file)
+    for xmlFile in files1:
+        with open(os.path.join(pre_file,xmlFile),'r') as fs:
+            managerList=[]
+            doc = xml.dom.minidom.Document()
+            root = doc.createElement('Recognition') 
+            root.setAttribute('type', 'face') 
+            doc.appendChild(root)
+            
+            str=fs.read()
+            line=str.split()
+            
+            for i in range(0,int(line[1])):
+                managerList.append([{'xmin':line[2+i*4],'ymin':line[3+i*4],'xmax':line[4+i*4],'ymax':line[5+i*4]}])
+            
+            for i in managerList :
+                for j in range(len(i)):
+                    nodeManager = doc.createElement('bndbox')
+                    nodeXmin = doc.createElement("xmin")
+                    nodeXmin.appendChild(doc.createTextNode(i[j]['xmin']))
+                    nodeYmin = doc.createElement("ymin")
+                    nodeYmin.appendChild(doc.createTextNode(i[j]['ymin']))
+                    nodeXmax = doc.createElement("xmax")
+                    nodeXmax.appendChild(doc.createTextNode(i[j]['xmax']))
+                    nodeYmax = doc.createElement("ymax")
+                    nodeYmax.appendChild(doc.createTextNode(i[j]['ymax']))
+        
+                 
+                    nodeManager.appendChild(nodeXmin)
+                    nodeManager.appendChild(nodeYmin)
+                    nodeManager.appendChild(nodeXmax)
+                    nodeManager.appendChild(nodeYmax)
+                    root.appendChild(nodeManager)
+    
+
+            pathn=os.path.join(after_file,line[0])
+            #pathn=os.path.join(pathn,".xml")
+            pathn+=".xml"
+            fp = open(pathn, 'w')
+            doc.writexml(fp, indent='\t', addindent='\t', newl='\n', encoding="utf-8")
+    print 'Transform_txt_xml() is OK'
 
 #imagefromsql(r'D:\file\try\trydown_png', True)

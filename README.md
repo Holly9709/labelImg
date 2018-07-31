@@ -1,6 +1,13 @@
 # 20180725 yangjinyuan
 # LabelImg
 
+###vipkid_v2.3 Updates
+##Newly added features
+- Add `Calculate roc curve` which need project name(database name) and modelxml file.
+![](demo/roc_result.png)
+- Add `Get project data` to download all images and xml files refer to  project name.
+- Add `Transform` feature to implement conversion between xml and txt formats.
+
 ### Updates
 
 - Solve `jpg` supporting for `py2-qt4` branch in Windows by adding [`plugins`](https://github.com/GreenKing/labelImg/blob/py2-qt4/labelImg.py#L17).

@@ -44,7 +44,7 @@ class MainWindow(QtGui.QWidget):
 class AskDialog(QtGui.QDialog):
     def __init__(self, parent=None):
         QtGui.QDialog.__init__(self, parent)
-        self.resize(240, 200)
+        self.resize(240, 100)
 
         # ±í¸ñ²¼¾Ö£¬ÓÃÀ´²¼¾ÖQLabelºÍQLineEdit¼°QSpinBox
         grid = QtGui.QGridLayout()
