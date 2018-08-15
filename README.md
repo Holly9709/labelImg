@@ -1,4 +1,4 @@
-# LabelImg For Marker
+## LabelImg For Marker
 
 ### vipkid_v2.3.0.1 Updates
 - fix `no_resume` mode bug to browse the images normally.
@@ -6,7 +6,7 @@
 - delete `Calculate roc curve` function.
 
 ### vipkid_v2.3 Updates
-## Newly added features
+#### Newly added features
 - Add `Calculate roc curve` which need project name(database name) and modelxml file.
 ![](demo/roc_result.png)
 - Add `Get project data` to download all images and xml files refer to  project name.
