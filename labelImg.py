@@ -30,7 +30,6 @@ from libs.toolBar import ToolBar
 from libs.pascal_voc_io import PascalVocReader
 import libs.sql_operate as lso
 import libs.tools
-import libs.roc
 from libs.ask_dialog import AskDialog
 __appname__ = 'labelImg'
 
@@ -230,7 +229,6 @@ class MainWindow(QMainWindow, WindowMixin):
                 'Ctrl+J','hide',u'wrong')
         showResults = action('&Show\nresults', self.show_results, 
                 u'Show Results')
-        calculateRocCurve = action('&Calculate\nROC\ncurve', self.calculateRocCurve)
         getProjectData = action('&Get\nproject\ndata', self.getProjectData)
         xmlToTxt_wh = action('&Transform xml to txt (wh)',self.xmlToTxt_wh, u'xmin, ymin, weight, height')
         xmlToTxt_xy = action('&Transform xml to txt (xy)',self.xmlToTxt_xy, u'xmin, ymin, xmax, ymax')
@@ -311,7 +309,6 @@ class MainWindow(QMainWindow, WindowMixin):
                 edit=self.menu('&Edit'),
                 view=self.menu('&View'),
                 verify=self.menu('&Verify'),
-                evaluate = self.menu('&Evaluate'),
                 tools = self.menu('&Tool'),
                 help=self.menu('&Help'),
                 recentFiles=QMenu('Open &Recent'),
@@ -321,7 +318,6 @@ class MainWindow(QMainWindow, WindowMixin):
                 (open, opendir,changeSavedir, enterProjectName,openAnnotation, self.menus.recentFiles, save, saveAs, close, None, quit))
         addActions(self.menus.help, (help,))
         addActions(self.menus.verify, (verify, right, wrong, showResults))
-        addActions(self.menus.evaluate, (calculateRocCurve,))
         addActions(self.menus.tools, (getProjectData, xmlToTxt_wh,xmlToTxt_xy,txtToXml))
 
         
@@ -598,44 +594,6 @@ class MainWindow(QMainWindow, WindowMixin):
             else:
                 return False
     
-    def calculateRocCurve(self):
-        print "trigger calculateRocCurve function."
-        if self.enterProjectName():
-            
-            path = '.'
-            dirpath = unicode(QFileDialog.getExistingDirectory(self,
-            '%s - Save to the directory' % __appname__, path,  QFileDialog.ShowDirsOnly
-                                                | QFileDialog.DontResolveSymlinks))
-
-            if dirpath is not None and len(dirpath) > 1:
-                saveDir = dirpath
-                #print saveDir
-                
-                testImgPath = lso.allImgFromDb(saveDir)
-                #download xml file from databases which is labelling by person.
-                personXmlPath = lso.allXmlFromDb(saveDir)
-                
-                #get the cascadexml file
-                filters = "Open Cascade XML file (%s)" % \
-                    ' '.join(['*.xml'])
-                cascadeXmlPath = unicode(QFileDialog.getOpenFileName(self,
-                 '%s - Choose Cascade Xml file' % __appname__, path, filters))
-                
-                #detect the image refer to cascade model and get txt file.
-                evaluateTxtPath = os.path.join(saveDir, 'evaluateTxt')
-                libs.tools.detect(testImgPath, cascadeXmlPath, evaluateTxtPath)
-                
-                #convert evaluateTxt to xml
-                evaluateXmlPath = os.path.join(saveDir, 'evaluateXml') 
-                libs.tools.Transform_txt_xml(evaluateTxtPath, evaluateXmlPath)
-                
-                #all files are ready, use roc function to calculate roc curve
-                libs.roc.roc(personXmlPath, evaluateXmlPath, saveDir)
-
-                print "IOU and roc results have been saved to %s"%(saveDir)
-                QMessageBox.information(self, u'Evaluate completed', u"IOU and roc results have been saved to %s"%(saveDir))
-        
-
     def getProjectData(self):
         print "trigger getProjectData function."
         #self.enterProjectName()
@@ -1202,7 +1160,7 @@ class MainWindow(QMainWindow, WindowMixin):
         if self.filename is None or self.idNum == 0:
             self.imagepath = lso.imagefromsql('C:\markimage',self.softwareMode)
             self.idNum = 1
-            if self.imagepath not in self.mImgList: 
+            if (self.imagepath not in self.mImgList) and self.imagepath != None:
                 self.mImgList.append(self.imagepath)
                 filename = self.mImgList[0]
         else:
@@ -1210,7 +1168,7 @@ class MainWindow(QMainWindow, WindowMixin):
                 if self.softwareMode == 'verify':
                     self.autoRight()
                 self.imagepath = lso.imagefromsql('C:\markimage',self.softwareMode)
-                if self.imagepath not in self.mImgList: 
+                if (self.imagepath not in self.mImgList) and self.imagepath != None: 
                     self.mImgList.append(self.imagepath)
             currIndex = self.mImgList.index(self.filename)
             if currIndex + 1 < len(self.mImgList):

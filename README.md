@@ -1,5 +1,9 @@
-# 20180725 yangjinyuan
-# LabelImg
+# LabelImg For Marker
+
+### vipkid_v2.3.0.1 Updates
+- fix `no_resume` mode bug to browse the images normally.
+- fix bug that it can not open another project after finishing one project. 
+- delete `Calculate roc curve` function.
 
 ###vipkid_v2.3 Updates
 ##Newly added features
