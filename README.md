@@ -5,8 +5,8 @@
 - fix bug that it can not open another project after finishing one project. 
 - delete `Calculate roc curve` function.
 
-###vipkid_v2.3 Updates
-##Newly added features
+### vipkid_v2.3 Updates
+## Newly added features
 - Add `Calculate roc curve` which need project name(database name) and modelxml file.
 ![](demo/roc_result.png)
 - Add `Get project data` to download all images and xml files refer to  project name.
