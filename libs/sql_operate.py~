@@ -17,9 +17,9 @@ global idNumSelect
 
 def con_db():
     global project_name
-    hostName = "xxx.xx.xxx.xx"
-    userName = "xxxx"
-    passWord = "xxxxxxx"
+    hostName = "172.23.250.51"
+    userName = "root"
+    passWord = "20180712"
     #dataBase = "ground_truth"
     dataBase = project_name
     charset = "utf8"

@@ -163,3 +163,61 @@ def Transform_xml_txt_xy(pre_file,after_file):
     print 'Transform_xml_txt_xy() is OK'
     print "%d xml files have been convert to txt."%count
     
+    
+def detectimg(classifer, imagepath):
+    image = cv2.imread(imagepath)
+    gray = cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
+ 
+    objects = classifer.detectMultiScale(
+            gray,
+            scaleFactor = 1.15,
+            minNeighbors = 5,
+            minSize = (5,5),
+            flags = cv2.CASCADE_SCALE_IMAGE
+    )
+    for i in range(0,len(objects)):
+        objects[i][2] = objects[i][0] + objects[i][2]
+        objects[i][3] = objects[i][1] + objects[i][3]
+    
+    imgFile = str(imagepath).split('\\')[-1]
+    meg = imgFile[:-4]
+    length = len(objects)
+    meg = meg + ' ' + str(length)
+    if length == 0:
+        return 0
+        #continue
+    else:
+        for i in range(0,length):
+            for j in range(0, 4):
+                meg = meg+' '+ str(objects[i][j])
+        print (meg)
+        return meg
+    #for(x,y,w,h) in hands:
+    # cv2.rectangle(image,(x,y),(x+w,y+w),(0,255,0),2)
+        #cv2.rectangle(image,(x,y),(x+w,y+h),(0,255,0),2)
+ 
+    #cv2.imshow("Find Hands!",image)
+    #cv2.waitKey(0)
+
+def detect(imgDirPath, cascadeXmlPath, testTxtPath):
+    
+    imgdirpath=imgDirPath
+    txtdirpath=testTxtPath
+    files = os.listdir(imgdirpath)
+    cascade = cv2.CascadeClassifier(cascadeXmlPath)
+    
+    isExists = os.path.exists(txtdirpath)
+    if not isExists:
+        os.makedirs(txtdirpath)
+    
+    for imgFile in files:
+        if not os.path.isdir(imgFile) and (imgFile.endswith('.png') or imgFile.endswith('.jpg')):
+            imagePath = os.path.join(imgdirpath, imgFile)
+            #get the test result
+            testResult = detectimg(cascade, imagePath)
+            if testResult != 0:
+                print (testResult)
+                txtFilePath = os.path.join(txtdirpath, imgFile[:-4]+'.txt')
+                file = open(txtFilePath,'w')
+                file.write(testResult)
+                file.close()

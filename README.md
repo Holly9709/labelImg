@@ -1,35 +1,18 @@
-# 20180725 yangjinyuan
-# LabelImg
+# LabelTxt
 
-###vipkid_v2.3 Updates
-##Newly added features
-- Add `Calculate roc curve` which need project name(database name) and modelxml file.
-![](demo/roc_result.png)
-- Add `Get project data` to download all images and xml files refer to  project name.
-- Add `Transform` feature to implement conversion between xml and txt formats.
+### vipkid_v1.0 Updates
+- change `labelImg` to `labelTxt` to label text.
 
-### Updates
+## Introduction
+LabelTxt is a text annotation tool which connect MySQL.
 
-- Solve `jpg` supporting for `py2-qt4` branch in Windows by adding [`plugins`](https://github.com/GreenKing/labelImg/blob/py2-qt4/labelImg.py#L17).
-- Add `auto save` while toggle to previous image.
-- Add `Simgle Class Mode` to speed up annotation.
-- Add `openPrevImg` and `openNextImg` action to advanced mode.
-- Add `Change default save dir` to tool bar.
-- Fix crash bug while choosing a point to delete.
-
-[![Build Status](https://travis-ci.org/tzutalin/labelImg.png)](https://travis-ci.org/tzutalin/labelImg)
-
-LabelImg is a graphical image annotation tool.
+Data storage and retrieval in the database.
 
 It is written in Python and uses Qt for its graphical interface.
 
-The annotation file will be saved as an XML file. The annotation format is PASCAL VOC format, and the format is the same as [ImageNet](http://www.image-net.org/)
+The annotation label will be saved in the database.(Separate multiple labels by ###)
 
 ![](demo/demo.png)
-
-![](demo/demo2.png)
-
-[![Demo video](https://j.gifs.com/4xy9z2.gif)](https://www.youtube.com/watch?v=p0nR2YsCY_U&feature=youtu.be)
 
 ## Build source and use it
 
