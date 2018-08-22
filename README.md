@@ -1,4 +1,7 @@
 # LabelTxt
+### vipkid_v1.1 Updates
+- `Browsing` and `verification` mode can work.
+- Fix the position where the label dialog appeared.
 
 ### vipkid_v1.0 Updates
 - change `labelImg` to `labelTxt` to label text.
