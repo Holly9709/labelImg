@@ -236,7 +236,7 @@ class MainWindow(QMainWindow, WindowMixin):
         create = action('Create\nRectBox', self.newShape,
                 'w', 'new', u'Draw a new Box', enabled=False)
         delete = action('Delete\nRectBox', self.deleteSelectedShape,
-                'Delete', 'delete', u'Delete', enabled=False)
+                'Delete', 'delete', u'Delete', enabled=True)
         copy = action('&Duplicate\nRectBox', self.copySelectedShape,
                 'Ctrl+D', 'copy', u'Create a duplicate of the selected Box',
                 enabled=False)
@@ -805,11 +805,26 @@ class MainWindow(QMainWindow, WindowMixin):
         for action in self.actions.onShapesPresent:
             action.setEnabled(True)
 
-    def remLabel(self, shape):
-        item = self.shapesToItems[shape]
-        self.labelList.takeItem(self.labelList.row(item))
-        del self.shapesToItems[shape]
-        del self.itemsToShapes[item]
+    def remLabel(self, select_del_label):
+        #item = self.shapesToItems[shape]
+        # self.labelList.takeItem(self.labelList.row(item))
+        # del self.shapesToItems[shape]
+        # del self.itemsToShapes[item]
+
+        zprint(self.textDict)
+        label_text=self.textDict[self.filename]
+        label_text=label_text.replace("%s"%(select_del_label),"#")
+        label_text=label_text.replace("####","")
+        if label_text=="#":
+            label_text=None
+        self.textDict[self.filename]=label_text
+        zprint(self.textDict)
+        
+        openNextImg()
+        openPrevImg()
+
+
+
 
     def loadLabels(self, filename):
         #self.canvas.loadShapes(s)
@@ -1319,7 +1334,13 @@ class MainWindow(QMainWindow, WindowMixin):
         msg = u'You are about to permanently delete this Box, proceed anyway?'
         try:
             if yes == QMessageBox.warning(self, u'Attention', msg, yes|no):
-                self.remLabel(self.canvas.deleteSelected())
+                # self.remLabel(self.canvas.deleteSelected())
+                # self.setDirty()
+                item=self.currentItem()
+                select_del_label=item.text()
+                zprint(select_del_label)
+                #label = unicode(item.text())
+                self.remLabel(select_del_label)
                 self.setDirty()
                 if self.noShapes():
                     for action in self.actions.onShapesPresent:
