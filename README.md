@@ -1,4 +1,7 @@
 # LabelTxt
+### vipkid_v1.2 Updates
+- add `Delete label` function
+
 ### vipkid_v1.1 Updates
 - `Browsing` and `verification` mode can work.
 - Fix the position where the label dialog appeared.
