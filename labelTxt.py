@@ -820,8 +820,8 @@ class MainWindow(QMainWindow, WindowMixin):
         self.textDict[self.filename]=label_text
         zprint(self.textDict)
         
-        openNextImg()
-        openPrevImg()
+        self.openNextImg()
+        self.openPrevImg()
 
 
 
